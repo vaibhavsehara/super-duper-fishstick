@@ -1,0 +1,22 @@
+/* Apply styles to the StickMan group */
+.StickMan {
+    -fx-fill: white;
+}
+
+/* Head */
+.StickMan .head {
+    -fx-fill: #FF5733; /* Orange color for the head */
+    -fx-stroke: black;
+}
+
+/* Body */
+.StickMan .body {
+    -fx-stroke: #FF5733;
+    -fx-stroke-width: 5;
+}
+
+/* Arms and Legs */
+.StickMan .arm-leg {
+    -fx-stroke: #FF5733; /* Orange color for the arms and legs */
+    -fx-stroke-width: 6;
+}
