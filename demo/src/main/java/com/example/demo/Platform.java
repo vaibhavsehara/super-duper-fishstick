@@ -9,17 +9,19 @@ public class Platform {
     private double x;
     private double width;
     private double height;
+    private double y;
 
-    public Platform(double width, double height, double x) {
+    public Platform(double width, double height, double x, double y) {
         this.width = width;
         this.height = height;
         this.x = x;
+        this.y = y;
 
-        rectangle = new Rectangle(width, height, Color.GREEN); // Adjust color as needed
+        rectangle = new Rectangle(width, height, Color.BLACK); // Adjust color as needed
 
         // Set initial position of the pillar
         rectangle.setTranslateX(x);
-        rectangle.setTranslateY(200 - height); // Set the initial y-coordinate based on your game design
+        rectangle.setTranslateY(y); // Set the initial y-coordinate based on your game design
     }
 
     public Rectangle getRectangle() {
@@ -39,7 +41,7 @@ public class Platform {
     }
 
     public double getY() {
-        return rectangle.getTranslateY();
+        return y;
     }
 
 }

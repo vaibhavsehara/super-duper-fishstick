@@ -2,6 +2,7 @@ package com.example.demo;
 import javafx.animation.*;
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -31,6 +32,7 @@ public class game extends Application {
 
     private TranslateTransition translateTransition;
     private boolean isSpaceBarPressed = false;
+    private Scene scene = createGameScene();
 
     @Override
     public void start(Stage primaryStage) {
@@ -65,14 +67,20 @@ public class game extends Application {
         StackPane stackPane = new StackPane();
         stackPane.getChildren().add(mediaView);
 
+        Button button = new Button("Go to Menu");
+        button.setOnMouseClicked( event -> {
+            switchToMenu(primaryStage);
+        });
+
+
         // Create platforms
-        Platform platform1 = new Platform(300, 20, 200); // Increased width of the platform
-        Platform platform2 = new Platform(300, 20, 400); // Increased width of the platform
+        Platform platform1 = new Platform(300, 20, 200,500); // Increased width of the platform
+        Platform platform2 = new Platform(300, 20, 400, 500); // Increased width of the platform
 
         // Add the stackPane to the root pane
         root.getChildren().add(stackPane);
-
-        // Add platform rectangles to the root
+        root.getChildren().add(button);
+//         Add platform rectangles to the root
         root.getChildren().add(platform1.getRectangle());
         root.getChildren().add(platform2.getRectangle());
 
@@ -80,7 +88,7 @@ public class game extends Application {
         root.getChildren().add(character);
 
         // Create the scene and set the root node
-        Scene scene = new Scene(root, 800, 800);
+        scene = new Scene(root, 800, 800);
 
         // Set up key event handlers
         scene.setOnKeyPressed(event -> {
@@ -120,11 +128,14 @@ public class game extends Application {
                 fallStick();
             }
         });
-
+        button.setFocusTraversable(false);
+        button.setOnMouseEntered(event -> button.requestFocus());
+        button.setOnMouseExited(event -> button.getParent().requestFocus());
         primaryStage.setTitle("Stick Hero Game");
         primaryStage.getIcons().add(logoicon);
         primaryStage.setScene(scene);
         primaryStage.show();
+
 
         mediaPlayer.play();
     }
@@ -154,6 +165,7 @@ public class game extends Application {
                 }));
         stickTimeline.setCycleCount(Timeline.INDEFINITE);
         stickTimeline.play();
+
     }
 
     private void growStick() {
@@ -173,8 +185,11 @@ public class game extends Application {
 
     private void fallStick() {
         if (currentStickLine != null) {
-            Path path = createFallingPath(currentStickLine.getStartX(), currentStickLine.getStartY(),
-                    currentStickLine.getEndY() - currentStickLine.getStartY());
+            double startX = currentStickLine.getStartX();
+            double startY = currentStickLine.getStartY();
+            double endY = currentStickLine.getEndY();
+
+            Path path = createFallingPath(startX, startY, endY - startY);
 
             fallTransition = new PathTransition();
             fallTransition.setNode(currentStickLine);
@@ -187,7 +202,7 @@ public class game extends Application {
             fallTranslateTransition = new TranslateTransition(Duration.seconds(2), character);
 
             // Move the character to the right by the length of the stick
-            fallTranslateTransition.setByX(currentStickLine.getEndY() - character.getTranslateX());
+            fallTranslateTransition.setByX(endY - character.getTranslateX());
 
             fallTransition.setOnFinished(event -> {
                 // Play the character movement transition after the stick falls
@@ -212,6 +227,10 @@ public class game extends Application {
         return path;
     }
 
+
+
+
+
     private void resetGame() {
         // Implement the logic to reset the game to its initial state
         // You may need to stop animations, clear elements, and set initial positions.
@@ -219,6 +238,33 @@ public class game extends Application {
         currentStickLine = null;
         translateTransition.stop();
         character.setTranslateX(200); // Set the initial position of the character
+    }
+    private void switchToMenu(Stage primaryStage) {
+        StackPane menuPane = new StackPane();
+        Scene menuScene = new Scene(menuPane, 800, 800);
+
+        Button button = new Button("Go to Game");
+        button.setOnMouseClicked( event ->{
+
+            primaryStage.setScene( scene );
+        });
+        button.setFocusTraversable(false);
+        button.setOnMouseEntered(event -> button.requestFocus());
+        button.setOnMouseExited(event -> button.getParent().requestFocus());
+        menuPane.getChildren().add(button);
+        primaryStage.setScene(menuScene);
+    }
+    private Scene createGameScene() {
+        // Implement logic to create and return the game scene
+        Pane gamePane = createGamePane();
+        return new Scene(gamePane, 800, 800);
+    }
+
+    private Pane createGamePane() {
+        // Implement logic to create and return the game pane
+        Pane gamePane = new Pane();
+        // Add game elements and set up event handlers as needed.
+        return gamePane;
     }
 
     public static void main(String[] args) {
