@@ -243,6 +243,13 @@ public class game extends Application {
         StackPane menuPane = new StackPane();
         Scene menuScene = new Scene(menuPane, 800, 800);
 
+        Image bgimage = new Image("/menubg.jpeg");
+        ImageView bgimageView = new ImageView(bgimage);
+        bgimageView.setFitWidth(1600);
+        bgimageView.setFitHeight(800);
+        bgimageView.setPreserveRatio(false);
+        menuPane.getChildren().add(bgimageView);
+
         Button button = new Button("Go to Game");
         button.setOnMouseClicked( event ->{
 
