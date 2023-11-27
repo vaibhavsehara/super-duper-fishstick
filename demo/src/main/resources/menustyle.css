@@ -1,0 +1,16 @@
+.button {
+    font-size: 20px;
+    padding: 10px 20px;
+    background-color: #ff0000;
+    color: rgba(0, 194, 255, 0.92);
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    transition-duration: 0.4s;
+}
+
+.button:hover {
+    background-color: #f700ff;
+}

@@ -8,7 +8,7 @@ public class Platform {
     private Rectangle rectangle;
     private double x;
     private double width;
-    private double height;
+    private final double height;
     private double y;
 
     public Platform(double width, double height, double x, double y) {
@@ -44,4 +44,7 @@ public class Platform {
         return y;
     }
 
+    public double calculateDistanceToNextPlatform(Platform nextPlatform) {
+        return nextPlatform.getX() - (this.x + this.width);
+    }
 }

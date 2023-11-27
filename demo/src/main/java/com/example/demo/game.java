@@ -1,6 +1,10 @@
 package com.example.demo;
+
 import javafx.animation.*;
 import javafx.application.Application;
+import javafx.geometry.Point3D;
+import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
@@ -8,79 +12,71 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
-import javafx.scene.shape.MoveTo;
-import javafx.stage.Stage;
-import javafx.util.Duration;
-import javafx.scene.media.Media;
-import javafx.scene.media.MediaPlayer;
-import javafx.scene.media.MediaView;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Line;
 import javafx.animation.TranslateTransition;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-
+import javafx.scene.transform.Affine;
+import javafx.util.Duration;
 
 public class game extends Application {
 
+    private Image characterImage;
     private ImageView character;
+    private double completedStickLength = 0;
+    Platform platform1 = new Platform(300, 500, 200, 500); // Increased width of the platform
+    Platform platform2 = new Platform(300, 500, 700, 500);
     private Pane root;
-    private MediaPlayer mediaPlayer;
+    private boolean canCreateStick = true;
+    private double platformDistance; // Adjust the distance between platforms as needed
     private Line currentStickLine;
-    private PathTransition fallTransition;
-    private TranslateTransition fallTranslateTransition = new TranslateTransition();
-
-    private double stickGrowthRate = 15; // Adjust the growth rate as needed
+    private double defaultStickManX = 0;
+    private double stickGrowthRate = 10; // Adjust the growth rate as needed
 
     private TranslateTransition translateTransition;
     private boolean isSpaceBarPressed = false;
+    private boolean isStickCreated = false;
     private Scene scene = createGameScene();
 
     @Override
-    public void start(Stage primaryStage) {
-        Image logoicon = new Image("snake.jpg");
+    public void start(javafx.stage.Stage primaryStage) {
+        Image logoIcon = new Image("snake.jpg");
+
 
         // Load the video file
-        Media media = new Media(getClass().getResource("/bgAnimation.mp4").toExternalForm());
-        mediaPlayer = new MediaPlayer(media);
-        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE); // Loop the video indefinitely
+        Image gameBg = new Image("bg3.jpeg");
+        ImageView gameBgImage = new ImageView(gameBg);
+        gameBgImage.setFitWidth(1600);
+        gameBgImage.setFitHeight(800);
+        gameBgImage.setPreserveRatio(false);
 
-        // Create a MediaView to display the video
-        MediaView mediaView = new MediaView(mediaPlayer);
-        mediaView.setFitWidth(1600);
-        mediaView.setFitHeight(800);
-        mediaView.setPreserveRatio(false);
-
-        Image image = new Image("/character.png"); // Replace with the actual image for your character
-        character = new ImageView(image);
-
-        // You can set the size of the image view as needed
-        character.setFitWidth(100);
-        character.setFitHeight(200);
-
-        translateTransition = new TranslateTransition(Duration.millis(200), character);
+        characterImage = new Image("/character.png");
 
         // Set the initial position of the character
-        character.setTranslateX(200);
-
+        defaultStickManX = platform1.getX() + platform1.getWidth();
+        character = new ImageView(characterImage);
+        character.setFitWidth(50);
+        character.setFitHeight(100);
+        character.setTranslateX(defaultStickManX);
+        character.setTranslateY(350);
+        translateTransition = new TranslateTransition(Duration.millis(400), character);
         root = new Pane();
 
         // Create a StackPane and add the character (ImageView) and media view to it
         StackPane stackPane = new StackPane();
-        stackPane.getChildren().add(mediaView);
+        stackPane.getChildren().add(gameBgImage);
 
         Button button = new Button("Go to Menu");
-        button.setOnMouseClicked( event -> {
+        button.setOnMouseClicked(event -> {
             switchToMenu(primaryStage);
         });
-
-
-        // Create platforms
-        Platform platform1 = new Platform(300, 20, 200,500); // Increased width of the platform
-        Platform platform2 = new Platform(300, 20, 400, 500); // Increased width of the platform
 
         // Add the stackPane to the root pane
         root.getChildren().add(stackPane);
         root.getChildren().add(button);
-//         Add platform rectangles to the root
+        // Add platform rectangles to the root
         root.getChildren().add(platform1.getRectangle());
         root.getChildren().add(platform2.getRectangle());
 
@@ -97,48 +93,60 @@ public class game extends Application {
                 createStick();
             }
 
-
-            if (event.getCode() == KeyCode.A && event.isShiftDown()) {
-                // Diagonal movement (left-up)
-                translateSmoothly(-2, -2);
-            }
-            if (event.getCode() == KeyCode.D && event.isShiftDown()) {
-                // Diagonal movement (right-up)
-                translateSmoothly(2, -2);
-            }
-            if (event.getCode() == KeyCode.A && event.isControlDown()) {
-                // Diagonal movement (left-down)
-                translateSmoothly(-2, 2);
-            }
-            if (event.getCode() == KeyCode.D && event.isControlDown()) {
-                // Diagonal movement (right-down)
-                translateSmoothly(2, 2);
-            }
-
             if (event.getCode() == KeyCode.R) {
-                resetGame();
+                reset();
+            }
+            if (event.getCode() == KeyCode.Q) {
+                switchPlatform();
             }
         });
-
 
         scene.setOnKeyReleased(event -> {
             if (event.getCode() == KeyCode.SPACE) {
                 isSpaceBarPressed = false;
                 stopFallingStick();
-                fallStick();
+                checkDistanceAndMove(); // Check distance and move character
             }
         });
         button.setFocusTraversable(false);
         button.setOnMouseEntered(event -> button.requestFocus());
         button.setOnMouseExited(event -> button.getParent().requestFocus());
         primaryStage.setTitle("Stick Hero Game");
-        primaryStage.getIcons().add(logoicon);
+        primaryStage.getIcons().add(logoIcon);
         primaryStage.setScene(scene);
         primaryStage.show();
-
-
-        mediaPlayer.play();
     }
+    private void fallStick() {
+        if (currentStickLine != null) {
+            // Calculate the length of the original stick
+            double stickLength = Math.abs(currentStickLine.getEndY() - currentStickLine.getStartY());
+
+            // Calculate the end point of the new horizontal stick
+            double endX = currentStickLine.getStartX() + stickLength;
+            double endY = currentStickLine.getStartY();
+
+            // Create a new horizontal stick with the same start point and length as the original stick
+            Line horizontalStick = new Line(currentStickLine.getStartX(), currentStickLine.getStartY(), endX, endY);
+            horizontalStick.setStrokeWidth(currentStickLine.getStrokeWidth());
+            horizontalStick.setStroke(currentStickLine.getStroke());
+
+            // Store the vertical stick in a separate variable
+            Line verticalStick = currentStickLine;
+            root.getChildren().remove(currentStickLine);
+
+            // Update the current stick line to the new horizontal stick
+            Line horizontalStickLine = horizontalStick;
+
+            // Add the new horizontal stick to the root children
+            root.getChildren().add(horizontalStickLine);
+
+            // Remove the original stick from the root children
+
+        }
+    }
+
+
+
 
     private void translateSmoothly(double deltaX, double deltaY) {
         translateTransition.setByX(deltaX);
@@ -146,125 +154,211 @@ public class game extends Application {
         translateTransition.play();
     }
 
-    private void createStick() {
-        // Create a stick starting from the character's position if it doesn't exist
-        if (currentStickLine == null) {
-            currentStickLine = new Line(character.getTranslateX() + character.getFitWidth() / 2,
-                    character.getTranslateY() + character.getFitHeight(), character.getTranslateX() + character.getFitWidth() / 2,
-                    character.getTranslateY() + character.getFitHeight());
-            root.getChildren().add(currentStickLine);
-        }
-
-        // Set up a timeline to continuously grow the stick while space bar is held down
-        Timeline stickTimeline = new Timeline(new KeyFrame(
-                Duration.millis(50),
-                ae -> {
-                    if (isSpaceBarPressed) {
-                        growStick();
-                    }
-                }));
-        stickTimeline.setCycleCount(Timeline.INDEFINITE);
-        stickTimeline.play();
+    private double calculatePlatformDistance() {
+        return platform2.getX() - (platform1.getX() + platform1.getWidth());
+    }
+    private void reset() {
+        // Call initializeGame to reset the game to its initial state
+        root.getChildren().remove(currentStickLine);
+        character.setTranslateX(defaultStickManX);
 
     }
+    private void createStick() {
+        if (canCreateStick) {
+            completedStickLength = 0;
+            if (currentStickLine == null) {
+                double startX = platform1.getX() + platform1.getWidth();
+                double startY = platform1.getY(); // Changed to top edge
 
-    private void growStick() {
-        if (currentStickLine != null) {
-            KeyValue keyValue = new KeyValue(currentStickLine.endYProperty(), currentStickLine.getEndY() + stickGrowthRate);
-            KeyFrame keyFrame = new KeyFrame(Duration.seconds(0.5), keyValue);
-            Timeline growthTimeline = new Timeline(keyFrame);
-            growthTimeline.play();
+                currentStickLine = new Line(startX, startY, startX, startY);
+                root.getChildren().add(currentStickLine);
+
+                translateTransition = new TranslateTransition(Duration.millis(400), character);
+                translateTransition.setByX(-character.getTranslateX() + currentStickLine.getStartX());
+                translateTransition.setByY(-character.getTranslateY() + currentStickLine.getStartY());
+
+                canCreateStick = false;
+                isStickCreated = false;
+
+                Timeline stickTimeline = new Timeline(new KeyFrame(
+                        Duration.millis(50),
+                        ae -> {
+                            if (isSpaceBarPressed) {
+                                growStick();
+                            } else {
+                                stopFallingStick();
+                                checkDistanceAndMove(); // Check distance and move character
+                            }
+                        }));
+                stickTimeline.setCycleCount(Timeline.INDEFINITE);
+                stickTimeline.play();
+            }
         }
     }
 
     private void stopFallingStick() {
-        if (fallTransition != null) {
-            fallTransition.stop();
+        if (translateTransition != null) {
+            translateTransition.stop();
         }
-    }
+        fallStick();
+        isStickCreated = true;
 
-    private void fallStick() {
+    }
+    private void growStick() {
         if (currentStickLine != null) {
-            double startX = currentStickLine.getStartX();
-            double startY = currentStickLine.getStartY();
-            double endY = currentStickLine.getEndY();
+            // Calculate the new endY position for the stick
+            double newEndY = currentStickLine.getEndY() - stickGrowthRate;
 
-            Path path = createFallingPath(startX, startY, endY - startY);
+            // Ensure that the newEndY is not above the starting point
+            if (newEndY >= 0) {
+                KeyValue keyValue = new KeyValue(currentStickLine.endYProperty(), newEndY);
+                KeyFrame keyFrame = new KeyFrame(Duration.seconds(0.10), keyValue);
+                Timeline growthTimeline = new Timeline(keyFrame);
 
-            fallTransition = new PathTransition();
-            fallTransition.setNode(currentStickLine);
-            fallTransition.setPath(path);
-            fallTransition.setCycleCount(1);
-            fallTransition.setInterpolator(javafx.animation.Interpolator.LINEAR);
-            fallTransition.setDuration(Duration.seconds(2));
+                growthTimeline.setOnFinished(event -> {
+                    // Update completedStickLength after the stick growth is complete
+                    completedStickLength = currentStickLine.getStartY() - currentStickLine.getEndY();
+                    checkStickCompletion();
+                });
 
-            // Initialize the fallTranslateTransition
-            fallTranslateTransition = new TranslateTransition(Duration.seconds(2), character);
-
-            // Move the character to the right by the length of the stick
-            fallTranslateTransition.setByX(endY - character.getTranslateX());
-
-            fallTransition.setOnFinished(event -> {
-                // Play the character movement transition after the stick falls
-                fallTranslateTransition.play();
-            });
-
-            fallTransition.play();
+                growthTimeline.play();
+            } else {
+                // If the newEndY is above the starting point, stop growing the stick
+                stopFallingStick();
+            }
         }
     }
 
-    private Path createFallingPath(double startX, double startY, double height) {
-        Path path = new Path();
-        path.getElements().add(new MoveTo(startX, startY));
 
-        // Create a quarter circle
-        for (double t = 0; t <= Math.PI / 2; t += 0.01) {
-            double x = startX + height * Math.sin(t);
-            double y = startY + height * (1 - Math.cos(t));
-            path.getElements().add(new javafx.scene.shape.LineTo(x, y));
+    private void checkStickCompletion() {
+        platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
+        if (completedStickLength >= platformDistance && isStickCreated) {
+
+            // Stick is long enough, perform character movement
+            double endX = character.getTranslateX() + platformDistance + platform2.getWidth();
+            double endY = character.getTranslateY();
+            moveCharacter(endX, endY);
         }
-
-        return path;
     }
 
 
+
+    private void checkDistanceAndMove() {
+        if (currentStickLine != null && isStickCreated) {
+            platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
+            if (completedStickLength >= platformDistance) {
+                double endX = platform2.getX() + platform2.getWidth();
+                double endY = character.getTranslateY();
+                moveCharacter(endX, endY);
+            } else {
+                resetGame();
+            }
+        }
+    }
+
+
+    private void moveCharacter(double endX, double endY) {
+        TranslateTransition moveTransition = new TranslateTransition(Duration.seconds(2), character);
+        moveTransition.setToX(endX);
+        moveTransition.setToY(endY);
+        moveTransition.setOnFinished(event -> {
+            switchPlatform();
+            // Reset the game state for the next platform
+            canCreateStick = true;
+            currentStickLine = null;
+        });
+        moveTransition.play();
+    }
 
 
 
     private void resetGame() {
+        // Properly reset the character's position
+        character.setTranslateX(defaultStickManX);
+        character.setTranslateY(350);
+
         // Implement the logic to reset the game to its initial state
         // You may need to stop animations, clear elements, and set initial positions.
-        root.getChildren().remove(currentStickLine);
-        currentStickLine = null;
-        translateTransition.stop();
-        character.setTranslateX(200); // Set the initial position of the character
+//        root.getChildren().remove(currentStickLine);
+//        currentStickLine = null;
+
+        // Reset the flag when the game is reset
+        canCreateStick = true;
     }
-    private void switchToMenu(Stage primaryStage) {
-        StackPane menuPane = new StackPane();
-        Scene menuScene = new Scene(menuPane, 800, 800);
 
-        Image bgimage = new Image("/menubg.jpeg");
-        ImageView bgimageView = new ImageView(bgimage);
-        bgimageView.setFitWidth(1600);
-        bgimageView.setFitHeight(800);
-        bgimageView.setPreserveRatio(false);
-        menuPane.getChildren().add(bgimageView);
+    private void switchPlatform() {
+        if (currentStickLine != null) {
+            root.getChildren().remove(currentStickLine);
+        }
 
-        Button button = new Button("Go to Game");
-        button.setOnMouseClicked( event ->{
+        // Check if a new platform is needed
+        if (character.getTranslateX() >= platform2.getX() + platform2.getWidth()) {
+            generateNewPlatform();
+        }
 
-            primaryStage.setScene( scene );
+        // Reset the game state
+//        currentStickLine = null;
+        canCreateStick = true;
+    }
+
+    private void generateNewPlatform() {
+        // Generate a new platform with random width and position
+        platform1 = platform2;
+        platform2 = new Platform(300, 500, platform2.getX() + platformDistance, 500);
+
+        // Add the new platform to the root
+        root.getChildren().add(platform2.getRectangle());
+
+        // Move the character to the starting position of the new platform
+        double startX = platform1.getX() + platform1.getWidth();
+        double startY = platform1.getY();
+        character.setTranslateX(startX);
+        character.setTranslateY(startY);
+    }
+
+
+    private void switchToMenu(javafx.stage.Stage primaryStage) {
+        VBox menuPane = new VBox(10); // 10 is the spacing between elements
+        menuPane.setAlignment(Pos.CENTER); // Align elements to the center
+
+        Image bgImage = new Image("/menubg.jpeg");
+        ImageView bgImageView = new ImageView(bgImage);
+        bgImageView.setFitWidth(1600);
+        bgImageView.setFitHeight(800);
+        bgImageView.setPreserveRatio(false);
+
+        // Create buttons
+        Button playButton = new Button("Play");
+        Button settingsButton = new Button("Settings");
+        Button exitButton = new Button("Exit");
+
+        // Apply CSS styles to the buttons
+        playButton.getStyleClass().add("button");
+        settingsButton.getStyleClass().add("button");
+        exitButton.getStyleClass().add("button");
+
+        // Set button actions
+        playButton.setOnAction(event -> primaryStage.setScene(scene));
+        settingsButton.setOnAction(event -> {
+            // Handle settings action
         });
-        button.setFocusTraversable(false);
-        button.setOnMouseEntered(event -> button.requestFocus());
-        button.setOnMouseExited(event -> button.getParent().requestFocus());
-        menuPane.getChildren().add(button);
+        exitButton.setOnAction(event -> javafx.application.Platform.exit());
+
+        // Add buttons to the pane
+        menuPane.getChildren().addAll(playButton, settingsButton, exitButton);
+
+        // Create a StackPane and add the ImageView and VBox to it
+        StackPane stackPane = new StackPane(bgImageView, menuPane);
+
+        Scene menuScene = new Scene(stackPane, 1600, 800);
+        menuScene.getStylesheets().add(getClass().getResource("/menustyle.css").toExternalForm());
+
         primaryStage.setScene(menuScene);
     }
     private Scene createGameScene() {
         // Implement logic to create and return the game scene
         Pane gamePane = createGamePane();
-        return new Scene(gamePane, 800, 800);
+        return new Scene(gamePane, 1600, 800);
     }
 
     private Pane createGamePane() {
