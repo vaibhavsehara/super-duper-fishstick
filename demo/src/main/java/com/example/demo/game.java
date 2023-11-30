@@ -39,6 +39,7 @@ public class game extends Application {
     private boolean isSpaceBarPressed = false;
     private boolean isStickCreated = false;
     private Scene scene = createGameScene();
+    private boolean isCharacterMoving = false;
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
@@ -164,34 +165,36 @@ public class game extends Application {
 
     }
     private void createStick() {
-        if (canCreateStick) {
-            completedStickLength = 0;
-            if (currentStickLine == null) {
-                double startX = platform1.getX() + platform1.getWidth();
-                double startY = platform1.getY(); // Changed to top edge
+        if (canCreateStick && !isCharacterMoving) {
+            if (canCreateStick) {
+                completedStickLength = 0;
+                if (currentStickLine == null) {
+                    double startX = platform1.getX() + platform1.getWidth();
+                    double startY = platform1.getY(); // Changed to top edge
 
-                currentStickLine = new Line(startX, startY, startX, startY);
-                root.getChildren().add(currentStickLine);
+                    currentStickLine = new Line(startX, startY, startX, startY);
+                    root.getChildren().add(currentStickLine);
 
-                translateTransition = new TranslateTransition(Duration.millis(400), character);
-                translateTransition.setByX(-character.getTranslateX() + currentStickLine.getStartX());
-                translateTransition.setByY(-character.getTranslateY() + currentStickLine.getStartY());
+                    translateTransition = new TranslateTransition(Duration.millis(400), character);
+                    translateTransition.setByX(-character.getTranslateX() + currentStickLine.getStartX());
+                    translateTransition.setByY(-character.getTranslateY() + currentStickLine.getStartY());
 
-                canCreateStick = false;
-                isStickCreated = false;
+                    canCreateStick = false;
+                    isStickCreated = false;
 
-                Timeline stickTimeline = new Timeline(new KeyFrame(
-                        Duration.millis(50),
-                        ae -> {
-                            if (isSpaceBarPressed) {
-                                growStick();
-                            } else {
-                                stopFallingStick();
-                                checkDistanceAndMove(); // Check distance and move character
-                            }
-                        }));
-                stickTimeline.setCycleCount(Timeline.INDEFINITE);
-                stickTimeline.play();
+                    Timeline stickTimeline = new Timeline(new KeyFrame(
+                            Duration.millis(50),
+                            ae -> {
+                                if (isSpaceBarPressed) {
+                                    growStick();
+                                } else {
+                                    stopFallingStick();
+                                    checkDistanceAndMove(); // Check distance and move character
+                                }
+                            }));
+                    stickTimeline.setCycleCount(Timeline.INDEFINITE);
+                    stickTimeline.play();
+                }
             }
         }
     }
@@ -304,7 +307,11 @@ public class game extends Application {
     private void generateNewPlatform() {
         // Generate a new platform with random width and position
         platform1 = platform2;
-        platform2 = new Platform(300, 500, platform2.getX() + platformDistance, 500);
+
+        // Generate a random gap between 50 and 500
+        double gap = 50 + Math.random() * 450;
+
+        platform2 = new Platform(300, 500, platform2.getX() + platform2.getWidth() + gap, 500);
 
         // Add the new platform to the root
         root.getChildren().add(platform2.getRectangle());
@@ -336,6 +343,7 @@ public class game extends Application {
         playButton.getStyleClass().add("button");
         settingsButton.getStyleClass().add("button");
         exitButton.getStyleClass().add("button");
+        playButton.setStyle("-fx-background-color: #ff0000;");
 
         // Set button actions
         playButton.setOnAction(event -> primaryStage.setScene(scene));
