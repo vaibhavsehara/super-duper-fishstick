@@ -19,16 +19,23 @@ import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.transform.Affine;
+import javafx.scene.transform.Rotate;
 import javafx.util.Duration;
 
 public class game extends Application {
 
     private Image characterImage;
+    private double count = 0;
     private ImageView character;
     private double completedStickLength = 0;
     Platform platform1 = new Platform(300, 500, 200, 500); // Increased width of the platform
-    Platform platform2 = new Platform(300, 500, 700, 500);
+    Platform platform2 = new Platform(100, 500, 700, 500);
+    Platform platform3;
     private Pane root;
+    private Line createdStick;
+    private boolean isMoving = false;
+    private boolean isCharacterAtEndPoint = false;
+
     private boolean canCreateStick = true;
     private double platformDistance; // Adjust the distance between platforms as needed
     private Line currentStickLine;
@@ -37,15 +44,17 @@ public class game extends Application {
 
     private TranslateTransition translateTransition;
     private boolean isSpaceBarPressed = false;
+    private boolean isCharacterMoved = false;
     private boolean isStickCreated = false;
     private Scene scene = createGameScene();
     private boolean isCharacterMoving = false;
+    private double gap;
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
         Image logoIcon = new Image("snake.jpg");
 
-
+        platform3 = new Platform(300, 500, 1200, 500);
         // Load the video file
         Image gameBg = new Image("bg3.jpeg");
         ImageView gameBgImage = new ImageView(gameBg);
@@ -60,8 +69,8 @@ public class game extends Application {
         character = new ImageView(characterImage);
         character.setFitWidth(50);
         character.setFitHeight(100);
-        character.setTranslateX(defaultStickManX);
-        character.setTranslateY(350);
+        character.setTranslateX(defaultStickManX-50);
+        character.setTranslateY(410);
         translateTransition = new TranslateTransition(Duration.millis(400), character);
         root = new Pane();
 
@@ -106,7 +115,8 @@ public class game extends Application {
             if (event.getCode() == KeyCode.SPACE) {
                 isSpaceBarPressed = false;
                 stopFallingStick();
-                checkDistanceAndMove(); // Check distance and move character
+                checkDistanceAndMove();
+                isCharacterAtEndPoint = true;// Check distance and move character
             }
         });
         button.setFocusTraversable(false);
@@ -117,55 +127,69 @@ public class game extends Application {
         primaryStage.setScene(scene);
         primaryStage.show();
     }
+
+
     private void fallStick() {
-        if (currentStickLine != null) {
-            // Calculate the length of the original stick
-            double stickLength = Math.abs(currentStickLine.getEndY() - currentStickLine.getStartY());
+        // Calculate the length of the stick
+        double length = Math.sqrt(Math.pow(createdStick.getStartX() - createdStick.getEndX(), 2) +
+                Math.pow(createdStick.getStartY() - createdStick.getEndY(), 2));
 
-            // Calculate the end point of the new horizontal stick
-            double endX = currentStickLine.getStartX() + stickLength;
-            double endY = currentStickLine.getStartY();
+        // Calculate the endX property of the stick after rotation
+        double endX = currentStickLine.getStartX() + length * Math.cos(Math.toRadians(90));
 
-            // Create a new horizontal stick with the same start point and length as the original stick
-            Line horizontalStick = new Line(currentStickLine.getStartX(), currentStickLine.getStartY(), endX, endY);
-            horizontalStick.setStrokeWidth(currentStickLine.getStrokeWidth());
-            horizontalStick.setStroke(currentStickLine.getStroke());
+        // Create a KeyValue for the endX and endY properties of the stick
+        KeyValue kvX = new KeyValue(currentStickLine.endXProperty(), createdStick.getEndX() + length);
+        KeyValue kvY = new KeyValue(currentStickLine.endYProperty(), currentStickLine.getStartY());
 
-            // Store the vertical stick in a separate variable
-            Line verticalStick = currentStickLine;
-            root.getChildren().remove(currentStickLine);
+        // Create a KeyFrame with the KeyValue and a duration of 0.5 seconds
+        KeyFrame kf = new KeyFrame(Duration.seconds(0.2), kvX, kvY);
 
-            // Update the current stick line to the new horizontal stick
-            Line horizontalStickLine = horizontalStick;
+        // Create a Timeline with the KeyFrame
+        Timeline timeline = new Timeline(kf);
 
-            // Add the new horizontal stick to the root children
-            root.getChildren().add(horizontalStickLine);
-
-            // Remove the original stick from the root children
-
-        }
+        // Play the Timeline
+        timeline.play();
     }
 
+    private void rotateNow(Rotate rotate, double count) {
+        if (count > 90) {
 
+        }
+        rotate.setAngle(count);
 
-
-    private void translateSmoothly(double deltaX, double deltaY) {
-        translateTransition.setByX(deltaX);
-        translateTransition.setByY(deltaY);
-        translateTransition.play();
     }
 
     private double calculatePlatformDistance() {
         return platform2.getX() - (platform1.getX() + platform1.getWidth());
     }
+
     private void reset() {
-        // Call initializeGame to reset the game to its initial state
-        root.getChildren().remove(currentStickLine);
+        // Reset the character's position
         character.setTranslateX(defaultStickManX);
+        character.setTranslateY(350); // Assuming 350 is the initial Y position of the character
+
+        // Allow the creation of a new stick
+        canCreateStick = true;
+
+        // Remove the current stick line if it exists
+        if (currentStickLine != null) {
+            root.getChildren().remove(currentStickLine);
+            currentStickLine = null;
+        }
+
+        // Reset the completed stick length
+        completedStickLength = 0;
+        root.getChildren().remove(platform3.getRectangle());
+        root.getChildren().remove(platform2.getRectangle());
+
+        platform1 = new Platform(300, 500, 200, 500); // Increased width of the platform
+        platform2 = new Platform(300, 500, 700, 500);
+
 
     }
+
     private void createStick() {
-        if (canCreateStick && !isCharacterMoving) {
+        if (canCreateStick && !isCharacterMoving && !isStickCreated) {
             if (canCreateStick) {
                 completedStickLength = 0;
                 if (currentStickLine == null) {
@@ -180,6 +204,7 @@ public class game extends Application {
                     translateTransition.setByY(-character.getTranslateY() + currentStickLine.getStartY());
 
                     canCreateStick = false;
+                    isCharacterAtEndPoint = false;
                     isStickCreated = false;
 
                     Timeline stickTimeline = new Timeline(new KeyFrame(
@@ -187,9 +212,12 @@ public class game extends Application {
                             ae -> {
                                 if (isSpaceBarPressed) {
                                     growStick();
+                                    createdStick = new Line(currentStickLine.getStartX(), currentStickLine.getStartY(), currentStickLine.getEndX(), currentStickLine.getEndY());
+
                                 } else {
                                     stopFallingStick();
-                                    checkDistanceAndMove(); // Check distance and move character
+                                    checkDistanceAndMove();
+                                    isCharacterAtEndPoint = true;// Check distance and move character
                                 }
                             }));
                     stickTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -198,15 +226,15 @@ public class game extends Application {
             }
         }
     }
-
     private void stopFallingStick() {
         if (translateTransition != null) {
             translateTransition.stop();
         }
         fallStick();
-        isStickCreated = true;
+        isStickCreated = true; // Set isStickCreated to true here
 
     }
+
     private void growStick() {
         if (currentStickLine != null) {
             // Calculate the new endY position for the stick
@@ -240,54 +268,108 @@ public class game extends Application {
             // Stick is long enough, perform character movement
             double endX = character.getTranslateX() + platformDistance + platform2.getWidth();
             double endY = character.getTranslateY();
-            moveCharacter(endX, endY);
-        }
-    }
-
-
-
-    private void checkDistanceAndMove() {
-        if (currentStickLine != null && isStickCreated) {
-            platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
-            if (completedStickLength >= platformDistance) {
-                double endX = platform2.getX() + platform2.getWidth();
-                double endY = character.getTranslateY();
-                moveCharacter(endX, endY);
-            } else {
-                resetGame();
-            }
+            moveAllComponents();
         }
     }
 
 
     private void moveCharacter(double endX, double endY) {
-        TranslateTransition moveTransition = new TranslateTransition(Duration.seconds(2), character);
-        moveTransition.setToX(endX);
-        moveTransition.setToY(endY);
-        moveTransition.setOnFinished(event -> {
-            switchPlatform();
-            // Reset the game state for the next platform
-            canCreateStick = true;
-            currentStickLine = null;
-        });
-        moveTransition.play();
+        if (!isMoving && !isCharacterAtEndPoint &&!isCharacterMoved) {
+            isMoving = true;
+
+            // Create a KeyValue for the X and Y properties of the character
+            KeyValue kvX = new KeyValue(character.translateXProperty(), endX);
+            KeyValue kvY = new KeyValue(character.translateYProperty(), endY);
+
+            // Create a KeyFrame with the KeyValue and a duration of 2 seconds
+            KeyFrame kf = new KeyFrame(Duration.seconds(2), kvX, kvY);
+
+            // Create a Timeline with the KeyFrame
+            Timeline timeline = new Timeline(kf);
+
+            // Set the onFinished event handler for the Timeline
+            timeline.setOnFinished(event -> {
+                isMoving = false;
+                isCharacterAtEndPoint = true;
+                isCharacterMoved = true;
+                moveAllComponents();
+            });
+
+            // Play the Timeline
+            timeline.play();
+        }
+    }
+
+    private void checkDistanceAndMove() {
+        if(!isCharacterMoved){
+
+        if (currentStickLine != null && isStickCreated ) {
+            platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
+            if (platformDistance <= completedStickLength) {
+                if (completedStickLength < platformDistance + platform2.getWidth()) {
+                    double endX = platform2.getX() + platform2.getWidth() - 60;
+                    double endY = character.getTranslateY();
+                    moveCharacter(endX, endY);
+
+                } else {
+                    fallCharacter();
+                }
+            } else {
+                fallCharacter();
+            }
+
+        }
+        }
     }
 
 
+    private void moveAllComponents() {
+        if (!isMoving) {
+            isMoving = true;
 
-    private void resetGame() {
-        // Properly reset the character's position
-        character.setTranslateX(defaultStickManX);
-        character.setTranslateY(350);
+            // Calculate the distance to move
+            double distance = platform2.getX();
+            System.out.println(distance);
 
-        // Implement the logic to reset the game to its initial state
-        // You may need to stop animations, clear elements, and set initial positions.
-//        root.getChildren().remove(currentStickLine);
-//        currentStickLine = null;
+            // Calculate the time it takes for the character to complete its journey
+            double time = 1; // Adjust the speed as needed
 
-        // Reset the flag when the game is reset
-        canCreateStick = true;
+            // Create and play the transition for the character
+            TranslateTransition characterTransition = new TranslateTransition(Duration.seconds(time), character);
+            characterTransition.setByX(-distance);
+            characterTransition.setOnFinished(event -> {
+                isMoving = false;
+                isCharacterMoved = true;
+            });
+            characterTransition.play();
+
+            TranslateTransition stickTransition = new TranslateTransition(Duration.seconds(time), currentStickLine);
+            stickTransition.setByX(-distance);
+            stickTransition.play();
+
+
+            // Create and play the transition for platform1
+            TranslateTransition platform1Transition = new TranslateTransition(Duration.seconds(time), platform1.getRectangle());
+            platform1Transition.setByX(-distance);
+            platform1Transition.play();
+
+            // Create and play the transition for platform2
+            TranslateTransition platform2Transition = new TranslateTransition(Duration.seconds(time), platform2.getRectangle());
+            platform2Transition.setByX(-distance);
+            platform2Transition.play();
+
+            // Create and play the transition for platform3
+            TranslateTransition platform3Transition = new TranslateTransition(Duration.seconds(time), platform3.getRectangle());
+            platform3Transition.setByX(-distance);
+            platform3Transition.play();
+
+            characterTransition.setOnFinished(event ->{
+                switchPlatform();
+                isMoving = false;
+            });
+        }
     }
+
 
     private void switchPlatform() {
         if (currentStickLine != null) {
@@ -295,32 +377,110 @@ public class game extends Application {
         }
 
         // Check if a new platform is needed
-        if (character.getTranslateX() >= platform2.getX() + platform2.getWidth()) {
-            generateNewPlatform();
-        }
+        generateNewPlatform();
 
         // Reset the game state
-//        currentStickLine = null;
-        canCreateStick = true;
+        canCreateStick = true; // Set canCreateStick to true here
     }
 
+    private void showRetryScreen(javafx.stage.Stage primaryStage) {
+        // Create a new pane for the retry screen
+        Pane retryPane = new Pane();
+
+        ImageView retryBgImage = new ImageView(new Image("/retry.jpeg"));
+        retryBgImage.setFitWidth(800);
+        retryBgImage.setFitHeight(800);
+        retryBgImage.setPreserveRatio(false);
+
+        // Create a retry button
+        Button retryButton = new Button("Retry");
+        retryButton.setLayoutX(375); // Adjust the position as needed
+        retryButton.setLayoutY(375); // Adjust the position as needed
+
+        StackPane stackPane = new StackPane(retryBgImage, retryButton);
+        // Set the action for the retry button
+        retryButton.setOnAction(event -> {
+            // Reset the game
+            reset();
+
+            // Set the scene back to the game scene
+            primaryStage.setScene(scene);
+
+        });
+
+        // Add the retry button to the retry pane
+        retryPane.getChildren().add(retryButton);
+
+        // Create a new scene for the retry screen
+        Scene retryScene = new Scene(retryPane, 800, 800);
+
+        // Set the scene of the primary stage to the retry scene
+        primaryStage.setScene(retryScene);
+    }
+
+    private void fallCharacter() {
+        // Calculate the distance to fall
+        double distance = root.getHeight() - character.getTranslateY();
+
+        // Calculate the time it takes for the character to fall
+        double time = 2; // Adjust the speed as needed
+
+        // Create a KeyValue for the moving action
+        KeyValue moveKeyValue = new KeyValue(character.translateXProperty(), character.getTranslateX() + completedStickLength + 60);
+        // Create a KeyFrame for the moving action
+        KeyFrame moveKeyFrame = new KeyFrame(Duration.seconds(time), moveKeyValue);
+
+        // Create a Timeline for the moving action
+        Timeline moveTimeline = new Timeline(moveKeyFrame);
+
+        moveTimeline.setOnFinished(event -> {
+            // Once the character has moved to the end of the stick, start the falling animation
+            // Create a KeyValue for the falling action
+            KeyValue fallKeyValue = new KeyValue(character.translateYProperty(), character.getTranslateY() + distance);
+
+            // Create a KeyFrame for the falling action
+            KeyFrame fallKeyFrame = new KeyFrame(Duration.seconds(time), fallKeyValue);
+
+            // Create a KeyValue for the rotation action
+            KeyValue rotateKeyValue = new KeyValue(character.rotateProperty(), 30); // Adjust the angle as needed
+
+            // Create a KeyFrame for the rotation action
+            KeyFrame rotateKeyFrame = new KeyFrame(Duration.seconds(time), rotateKeyValue);
+
+            // Create a Timeline for the falling and rotation actions
+            Timeline fallTimeline = new Timeline(fallKeyFrame, rotateKeyFrame);
+
+            fallTimeline.setOnFinished(fallEvent -> {
+                // Remove the character from the root pane once it has fallen
+                root.getChildren().remove(character);
+
+                // Show the retry screen
+                if (root.getScene().getWindow() instanceof javafx.stage.Stage) {
+                    showRetryScreen((javafx.stage.Stage) root.getScene().getWindow());
+                }
+            });
+
+            fallTimeline.play();
+        });
+
+        moveTimeline.play();
+    }
     private void generateNewPlatform() {
         // Generate a new platform with random width and position
         platform1 = platform2;
 
         // Generate a random gap between 50 and 500
-        double gap = 50 + Math.random() * 450;
+        gap = 50 + Math.random() * 450;
+        double wid = 100 + Math.random() * 200;
 
-        platform2 = new Platform(300, 500, platform2.getX() + platform2.getWidth() + gap, 500);
+
+        platform2 = new Platform(wid, 500, platform2.getX() + platform2.getWidth() + gap, 500);
 
         // Add the new platform to the root
         root.getChildren().add(platform2.getRectangle());
 
-        // Move the character to the starting position of the new platform
-        double startX = platform1.getX() + platform1.getWidth();
-        double startY = platform1.getY();
-        character.setTranslateX(startX);
-        character.setTranslateY(startY);
+
+
     }
 
 

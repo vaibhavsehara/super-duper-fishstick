@@ -1,7 +1,9 @@
 package com.example.demo;
 
+import javafx.animation.TranslateTransition;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 
 public class Platform {
 
@@ -47,4 +49,5 @@ public class Platform {
     public double calculateDistanceToNextPlatform(Platform nextPlatform) {
         return nextPlatform.getX() - (this.x + this.width);
     }
+
 }
