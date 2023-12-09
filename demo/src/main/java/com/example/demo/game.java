@@ -28,6 +28,7 @@ public class game extends Application {
 
     private Image characterImage;
     private double count = 0;
+    private double Score = 0;
     private ImageView character;
     private double completedStickLength = 0;
     private Timeline stickTimeline;
@@ -35,10 +36,11 @@ public class game extends Application {
     Platform platform2 = new Platform(100, 500, 700, 500);
     Platform platform3;
     private Pane root;
+    private boolean Inverted = false;
     private Line createdStick;
     private boolean isMoving = false;
     private boolean isCharacterAtEndPoint = false;
-
+    private boolean isSpaceBarLocked = false;
     private boolean canCreateStick = true;
     private double platformDistance; // Adjust the distance between platforms as needed
     private Line currentStickLine;
@@ -46,6 +48,8 @@ public class game extends Application {
     private double stickGrowthRate = 10; // Adjust the growth rate as needed
 
     private TranslateTransition translateTransition;
+    ImageView Sigil;
+    private boolean isSigilCollected = false;
     private boolean isSpaceBarPressed = false;
     private boolean isCharacterMoved = false;
     private boolean isComponentsMoved = false;
@@ -62,6 +66,17 @@ public class game extends Application {
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
+        Sigil = new ImageView(new Image("Sigil.jpeg"));
+        Sigil.setFitHeight(20);
+        Sigil.setFitWidth(20);
+
+
+        double gapStart = platform1.getX() + platform1.getWidth();
+        double gapEnd = platform2.getX();
+        double gapMiddle = (gapStart + gapEnd) / 2;
+        Sigil.setX(gapMiddle);
+        Sigil.setY(platform1.getY() + 10);
+
         Image logoIcon = new Image("snake.jpg");
 
         platform3 = new Platform(300, 500, 1200, 500);
@@ -95,10 +110,12 @@ public class game extends Application {
 
         // Add the stackPane to the root pane
         root.getChildren().add(stackPane);
+        Sigil.setY(platform1.getY() + 10);
         root.getChildren().add(button);
         // Add platform rectangles to the root
         root.getChildren().add(platform1.getRectangle());
         root.getChildren().add(platform2.getRectangle());
+        root.getChildren().add(Sigil);
 
         // Add the character to the root pane
         root.getChildren().add(character);
@@ -111,7 +128,7 @@ public class game extends Application {
             if (event.getCode() == KeyCode.SPACE) {
                 isCharacterMoved = false;
                 isSpaceBarPressed = true;
-                if(canCreateStick ){
+                if(canCreateStick && !isSpaceBarLocked){
                 createStick();
             }}
 
@@ -121,12 +138,24 @@ public class game extends Application {
             if (event.getCode() == KeyCode.Q) {
                 switchPlatform();
             }
+            if (event.getCode() == KeyCode.I){
+                if(!Inverted && isCharacterBetweenGap()){
+               character.setRotate(180);
+               character.setLayoutY(character.getLayoutY()+80);
+            }else if (Inverted && isCharacterBetweenGap()){
+                    character.setRotate(0);
+                    character.setLayoutY(character.getLayoutY()-80);
+                }
+                Inverted = !Inverted;
+            }
         });
 
         scene.setOnKeyReleased(event -> {
             if (event.getCode() == KeyCode.SPACE) {
+                isSpaceBarLocked = true;
                 isSpaceBarPressed = false;
                 stopFallingStick();
+
             }
         });
         button.setFocusTraversable(false);
@@ -142,6 +171,7 @@ public class game extends Application {
 
 
     private void fallStick() {
+        canCreateStick = false;
         // Calculate the length of the stick
         double length = Math.sqrt(Math.pow(createdStick.getStartX() - createdStick.getEndX(), 2) +
                 Math.pow(createdStick.getStartY() - createdStick.getEndY(), 2));
@@ -158,13 +188,16 @@ public class game extends Application {
 
         // Create a Timeline with the KeyFrame
         Timeline timeline = new Timeline(kf);
-        timeline.setOnFinished(event -> {
-            // Call the checkDistanceAndMove method here after the stick has completed its fall animation
-            checkDistanceAndMove();
-        });
+
+            PauseTransition pause = new PauseTransition(Duration.seconds(2));
+            pause.setOnFinished(event ->{
+                checkDistanceAndMove();
+            });
+            // Call the checkDistanceAndMove method here after the stick has completed its fall animat
 
         // Play the Timeline
         timeline.play();
+        pause.play();
 
 
     }
@@ -195,6 +228,9 @@ public class game extends Application {
     }
 
     private void createStick() {
+        if(isMoving || !canCreateStick){
+            return;
+        }
         if ( !isMoving) {
             if (canCreateStick) {
                 if (currentStickLine == null) {
@@ -219,7 +255,7 @@ public class game extends Application {
                             Duration.millis(50),
                             ae -> {
                                 if (currentStickLine != null) {
-                                    if (isSpaceBarPressed) {
+                                    if (isSpaceBarPressed && !isSpaceBarLocked) {
                                         growStick();
                                         createdStick = new Line(currentStickLine.getStartX(), currentStickLine.getStartY(), currentStickLine.getEndX(), currentStickLine.getEndY());
 
@@ -231,8 +267,15 @@ public class game extends Application {
                     stickTimeline.setCycleCount(Timeline.INDEFINITE);
                     stickTimeline.play();
                 }
+                canCreateStick = false;
             }
         }
+    }
+    private boolean isCharacterBetweenGap() {
+        double characterX = character.getTranslateX();
+        double gapStart = platform1.getX() + platform1.getWidth();
+        double gapEnd = platform2.getX();
+        return characterX > gapStart && characterX < gapEnd;
     }
     private void stopFallingStick() {
         if (translateTransition != null) {
@@ -300,6 +343,7 @@ public class game extends Application {
                 moveAllComponents();
                 double updatedX = platform1.getX();
                 double updatedY = platform1.getY();
+                canCreateStick = true;
             });
 
             // Play the Timeline
@@ -309,22 +353,22 @@ public class game extends Application {
 
     private void checkDistanceAndMove() {
         if(!isCharacterMoved){
-
-        if (currentStickLine != null && isStickCreated ) {
-            platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
-            if (platformDistance <= completedStickLength) {
-                if (completedStickLength < platformDistance + platform2.getWidth()) {
+            if (currentStickLine != null && isStickCreated ) {
+                platformDistance = platform1.calculateDistanceToNextPlatform(platform2);
+                double distanceToEndOfNextPlatform = platformDistance + platform2.getWidth();
+                if (completedStickLength >= platformDistance && completedStickLength <= distanceToEndOfNextPlatform) {
                     double endX = platform2.getX() + platform2.getWidth() - 60;
                     double endY = character.getTranslateY();
                     moveCharacter(endX, endY);
-
                 } else {
                     fallCharacter();
                 }
             }
-
         }
-        }
+        if (character.getBoundsInParent().intersects(Sigil.getBoundsInParent()) && Inverted)  {
+            // Step 5: If the character has collected the sigil, increase the score and remove the sigil from the root pane
+            Score++; // assuming you have a score variable
+            root.getChildren().remove(Sigil);}
     }
     private void moveAllComponents() {
         if (!isMoving) {
@@ -397,6 +441,7 @@ public class game extends Application {
         if (isComponentsMoved) {
             canCreateStick = true;
         }
+        isSpaceBarLocked = false;
 
         // Create a new stick at the right edge of the new platform
 
