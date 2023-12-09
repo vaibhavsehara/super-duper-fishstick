@@ -1,45 +1,25 @@
-# super-duper-fishstick
 # Stick Hero Game
 
-This is a simple Stick Hero game implemented in Java with JavaFX.
+This is a JavaFX application that implements the Stick Hero game.
 
-## Prerequisites
+## Game Description
 
-- Java Development Kit (JDK) installed
-- JavaFX library included in the project
+In Stick Hero, the player controls a character that needs to cross gaps between platforms by creating sticks of the right length. The player can also collect sigils for extra points. The game includes features like a high score that is saved between sessions, a retry function, and background music.
 
-## How to Run
+## Installation
 
-1. Clone the repository or download the source code.
-2. Open the project in your preferred Java IDE.
-3. Set up the JavaFX library in your IDE.
-4. Run the `game` class, which extends `Application`.
+1. Clone the repository: `git clone https://github.com/yourusername/stick-hero.git`
+2. Navigate to the project directory: `cd stick-hero`
+3. Compile the project with Maven: `mvn compile`
+4. Run the application: `mvn javafx:run`
 
-## Game Controls
+## Usage
 
-- Use the **Spacebar** to create sticks.
-- Use **A/D** for diagonal movements.( disabled right now )
-- Use **Shift + A/D** for diagonal movements in the opposite direction. ( disabled rightnow, for testing of character movement during stick creation )
-- Press **R** to reset the game.
+Use the SPACE key to start growing a stick. Release the SPACE key to stop growing the stick and let the character start moving. Press the R key to reset the game. Press the I key to invert the character. Press the Q key to switch platforms.
 
-## Features
+## Contributing
 
-- Character movement and stick creation.
-- Diagonal movements and stick growth.
-- Platform creation.
-- Menu with options to go back to the game.
-
-## Credits
-
-- Background Animation: `bgAnimation.mp4`
-- Character Image: `character.png`
-- Platform Design: Custom `Platform` class
-- Logo Icon: `snake.jpg`
-
-## Additional Notes
-
-- The game has a simple menu with options to navigate back to the game.
-- You can customize the game elements and add more features as needed.
-
+vaibhav sehara
+vidhan.
 
 
