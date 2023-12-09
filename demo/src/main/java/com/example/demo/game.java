@@ -27,7 +27,7 @@ import javafx.util.Duration;
 public class game extends Application {
 
     private Image characterImage;
-    private double count = 0;
+    private double movementScore = 0;
     private double Score = 0;
     private ImageView character;
     private ImageView ScoreSigil;
@@ -60,6 +60,8 @@ public class game extends Application {
     private boolean isCharacterMoving = false;
     private double gap;
     private boolean characterCollided = false;
+    Label movementScoreLabel = new Label("Movement Score: 0");
+    Label SigilLabel= new Label("Score: 0");
     private Scene createGameScene( javafx.stage.Stage primaryStage){
 
         return new Scene(root, 1600, 800);
@@ -67,14 +69,16 @@ public class game extends Application {
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
+        movementScoreLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #011627;"); // adjust the style as needed
+
         ScoreSigil = new ImageView(new Image("anemo.png"));
         ScoreSigil.setFitHeight(30);
         ScoreSigil.setFitWidth(30);
-        Label scoreLabel = new Label("Score: 0");
-        scoreLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #011627;"); // adjust the style as needed
+
+        SigilLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #011627;"); // adjust the style as needed
 
 // Position the ScoreSigil and scoreLabel at the top right
-        HBox scoreBox = new HBox(ScoreSigil, scoreLabel);
+        HBox scoreBox = new HBox(ScoreSigil, SigilLabel);
         scoreBox.setAlignment(Pos.TOP_RIGHT);
 
 // Add the scoreBox to the root pane
@@ -134,11 +138,12 @@ public class game extends Application {
         AnchorPane.setTopAnchor(scoreBox, 10.0); // 10 units down from the top edge
         AnchorPane.setRightAnchor(scoreBox, 10.0);
 
-        scoreLabel.setText("Score: " + Score);
+        SigilLabel.setText("Score: " + Score);
         // Add platform rectangles to the root
         root.getChildren().add(platform1.getRectangle());
         root.getChildren().add(platform2.getRectangle());
         root.getChildren().add(Sigil);
+        root.getChildren().add(movementScoreLabel);
 
         // Add the character to the root pane
         root.getChildren().add(character);
@@ -385,16 +390,23 @@ public class game extends Application {
                     double endY = character.getTranslateY();
 
                     moveCharacter(endX, endY);
-
+                    if (!isCharacterMoved) {
+                        movementScore += 1;
+                        movementScoreLabel.setText("Movement Score: " + movementScore);
+                        isCharacterMoved = true;
+                    }
                 } else {
                     fallCharacter();
                 }
             }
         }
-        if (character.getBoundsInParent().intersects(Sigil.getBoundsInParent()) && Inverted)  {
-            // Step 5: If the character has collected the sigil, increase the score and remove the sigil from the root pane
-            Score++; // assuming you have a score variable
-            root.getChildren().remove(Sigil);}
+        if (!isSigilCollected && character.getBoundsInParent().intersects(Sigil.getBoundsInParent()) && Inverted)  {
+            Score+= 1; // assuming you have a score variable
+            SigilLabel.setText("Sigils: " + Score);
+            root.getChildren().remove(Sigil);
+            isSigilCollected = true;
+        }
+
         if (character.getBoundsInParent().intersects((platform2.getRectangle().getBoundsInParent())) && Inverted) {
             if (character.getTranslateX() + character.getFitWidth() >= platform2.getX()) {
                 StopCharacter();
