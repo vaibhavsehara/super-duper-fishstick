@@ -33,6 +33,8 @@ public class Platform {
     public double getX() {
         return x;
     }
+    public void setX(double x) { this.x = x;
+    this.rectangle.setTranslateX(x);}
 
     public double getWidth() {
         return width;
