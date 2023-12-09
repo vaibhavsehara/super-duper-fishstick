@@ -385,6 +385,7 @@ public class game extends Application {
                     double endY = character.getTranslateY();
 
                     moveCharacter(endX, endY);
+
                 } else {
                     fallCharacter();
                 }
@@ -530,8 +531,6 @@ public class game extends Application {
         }
         Inverted = false;
         isSpaceBarLocked = false;
-
-        // Create a new stick at the right edge of the new platform
         resetAllBoolean();
     }
     private void resetAllBoolean() {
