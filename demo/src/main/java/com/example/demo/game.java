@@ -14,6 +14,8 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.*;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.shape.Line;
 import javafx.animation.TranslateTransition;
 import javafx.scene.shape.LineTo;
@@ -24,14 +26,20 @@ import javafx.scene.transform.Rotate;
 import javafx.stage.Screen;
 import javafx.util.Duration;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class game extends Application {
 
     private Image characterImage;
-    private double movementScore = 0;
-    private double Score = 0;
+    private int movementScore = 0;
+    private int Score = 0;
     private ImageView character;
     private ImageView ScoreSigil;
     private double completedStickLength = 0;
+    private Timeline timeline;
     private Timeline stickTimeline;
     Platform platform1 = new Platform(300, 500, 200, 500); // Increased width of the platform
     Platform platform2 = new Platform(100, 500, 700, 500);
@@ -59,9 +67,11 @@ public class game extends Application {
     private Scene scene = createGameScene();
     private boolean isCharacterMoving = false;
     private double gap;
+    private int highScore = 0;
+    Label highScoreLabel;
     private boolean characterCollided = false;
-    Label movementScoreLabel = new Label("Movement Score: 0");
-    Label SigilLabel= new Label("Score: 0");
+    Label movementScoreLabel = new Label(String.valueOf(movementScore));
+    Label SigilLabel= new Label(String.valueOf(Score));
     private Scene createGameScene( javafx.stage.Stage primaryStage){
 
         return new Scene(root, 1600, 800);
@@ -69,7 +79,19 @@ public class game extends Application {
 
     @Override
     public void start(javafx.stage.Stage primaryStage) {
-        movementScoreLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #011627;"); // adjust the style as needed
+        Media bgMusic = new Media(getClass().getResource("/02 THE STORM.mp3").toExternalForm());
+        MediaPlayer mediaPlayer = new MediaPlayer(bgMusic);
+        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE); // Loop the music
+        mediaPlayer.play();
+        highScoreLabel = new Label("High Score: 0");
+        highScoreLabel.setStyle("-fx-font-size: 24; -fx-text-fill: #011627;"); // adjust the style as needed
+
+
+
+        movementScoreLabel.setStyle("-fx-font-size: 100; -fx-text-fill: #011627;"); // adjust the style as needed
+
+        HBox movementscoreBox = new HBox(movementScoreLabel);
+        movementscoreBox.setAlignment(Pos.CENTER);
 
         ScoreSigil = new ImageView(new Image("anemo.png"));
         ScoreSigil.setFitHeight(30);
@@ -81,11 +103,14 @@ public class game extends Application {
         HBox scoreBox = new HBox(ScoreSigil, SigilLabel);
         scoreBox.setAlignment(Pos.TOP_RIGHT);
 
-// Add the scoreBox to the root pane
-
-
-// Update the scoreLabel text whenever the score changes
-// This should be done in your game loop or wherever you update the score
+        Image menuImage = new Image("quit6.png"); // Replace "menu.png" with your image file
+        ImageView menuImageView = new ImageView(menuImage);
+        menuImageView.setLayoutX(0); // Set the X coordinate
+        menuImageView.setLayoutY(0); // Set the Y coordinate
+        menuImageView.setOnMouseClicked(event -> {
+            // Switch to the menu
+            switchToMenu(primaryStage);
+        });
 
 
         Sigil = new ImageView(new Image("anemo.png"));
@@ -125,25 +150,25 @@ public class game extends Application {
         StackPane stackPane = new StackPane();
         stackPane.getChildren().add(gameBgImage);
 
-        Button button = new Button("Go to Menu");
-        button.setOnMouseClicked(event -> {
-            switchToMenu(primaryStage);
-        });
 
         // Add the stackPane to the root pane
         root.getChildren().add(stackPane);
         Sigil.setY(platform1.getY() + 10);
-        root.getChildren().add(button);
+        root.getChildren().add(menuImageView);
         root.getChildren().add(scoreBox);
         AnchorPane.setTopAnchor(scoreBox, 10.0); // 10 units down from the top edge
         AnchorPane.setRightAnchor(scoreBox, 10.0);
+//        root.getChildren().add(highScoreLabel);
+//        AnchorPane.setTopAnchor(highScoreLabel, 90.0); // 90 units down from the top edge
+//        AnchorPane.setRightAnchor(highScoreLabel, 10.0); // 10 units from the right edge
+        root.getChildren().add(movementScoreLabel);
+        AnchorPane.setTopAnchor(movementScoreLabel, 50.0); // 50 units down from the top edge
+        AnchorPane.setLeftAnchor(movementScoreLabel, 800.0); // 10 units from the left edge
 
-        SigilLabel.setText("Score: " + Score);
         // Add platform rectangles to the root
         root.getChildren().add(platform1.getRectangle());
         root.getChildren().add(platform2.getRectangle());
         root.getChildren().add(Sigil);
-        root.getChildren().add(movementScoreLabel);
 
         // Add the character to the root pane
         root.getChildren().add(character);
@@ -161,7 +186,7 @@ public class game extends Application {
             }}
 
             if (event.getCode() == KeyCode.R) {
-                reset();
+                resetGame();
             }
             if (event.getCode() == KeyCode.Q) {
                 switchPlatform();
@@ -186,9 +211,6 @@ public class game extends Application {
 
             }
         });
-        button.setFocusTraversable(false);
-        button.setOnMouseEntered(event -> button.requestFocus());
-        button.setOnMouseExited(event -> button.getParent().requestFocus());
         primaryStage.setTitle("Stick Hero Game");
         primaryStage.getIcons().add(logoIcon);
         primaryStage.setScene(scene);
@@ -299,6 +321,27 @@ public class game extends Application {
             }
         }
     }
+    private void writeHighScoreToFile(int highScore) {
+        try {
+            FileWriter writer = new FileWriter("highscore.txt");
+            writer.write(String.valueOf(highScore));
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    private int readHighScoreFromFile() {
+        try {
+            FileReader reader = new FileReader("highscore.txt");
+            BufferedReader bufferedReader = new BufferedReader(reader);
+            String highScoreString = bufferedReader.readLine();
+            bufferedReader.close();
+            return Integer.parseInt(highScoreString);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
     private boolean isCharacterBetweenGap() {
         double characterX = character.getTranslateX();
         double gapStart = platform1.getX() + platform1.getWidth();
@@ -360,8 +403,12 @@ public class game extends Application {
             // Create a KeyFrame with the KeyValue and a duration of 2 seconds
             KeyFrame kf = new KeyFrame(Duration.seconds(2), kvX, kvY);
 
+            if (timeline != null) {
+                timeline.stop();
+            }
+
             // Create a Timeline with the KeyFrame
-            Timeline timeline = new Timeline(kf);
+             timeline = new Timeline(kf);
 
             // Set the onFinished event handler for the Timeline
             timeline.setOnFinished(event -> {
@@ -392,7 +439,7 @@ public class game extends Application {
                     moveCharacter(endX, endY);
                     if (!isCharacterMoved) {
                         movementScore += 1;
-                        movementScoreLabel.setText("Movement Score: " + movementScore);
+                        movementScoreLabel.setText(String.valueOf(movementScore));
                         isCharacterMoved = true;
                     }
                 } else {
@@ -402,9 +449,13 @@ public class game extends Application {
         }
         if (!isSigilCollected && character.getBoundsInParent().intersects(Sigil.getBoundsInParent()) && Inverted)  {
             Score+= 1; // assuming you have a score variable
-            SigilLabel.setText("Sigils: " + Score);
+            SigilLabel.setText(String.valueOf(Score));
             root.getChildren().remove(Sigil);
             isSigilCollected = true;
+            if (Score > highScore) {
+                highScore = Score;
+                writeHighScoreToFile(highScore);
+            }
         }
 
         if (character.getBoundsInParent().intersects((platform2.getRectangle().getBoundsInParent())) && Inverted) {
@@ -450,6 +501,13 @@ public class game extends Application {
         });
 
         fallTimeline.play();
+    }
+    private void resetAndStartGame(javafx.stage.Stage primaryStage) {
+        // Reset the game
+        resetGame();
+
+        // Set the scene back to the game scene
+        primaryStage.setScene(scene);
     }
     private void moveAllComponents() {
         if (!isMoving) {
@@ -556,38 +614,92 @@ public class game extends Application {
         Inverted = false;
         isSpaceBarPressed = false;
         characterCollided = false;
+        isSigilCollected = false;
     }
-
     private void showRetryScreen(javafx.stage.Stage primaryStage) {
+        highScore = readHighScoreFromFile();
         // Create a new pane for the retry screen
-        Pane retryPane = new Pane();
+        VBox retryPane = new VBox(10); // 10 is the spacing between elements
+        retryPane.setAlignment(Pos.CENTER); // Align elements to the center
 
-        ImageView retryBgImage = new ImageView(new Image("/retry.jpeg"));
-        retryBgImage.setFitWidth(800);
-        retryBgImage.setFitHeight(800);
-        retryBgImage.setPreserveRatio(false);
+        Button menuButton = new Button("Menu");
+        menuButton.setLayoutX(580); // Set the X coordinate
+        menuButton.setLayoutY(560); // Set the Y coordinate
+        menuButton.setPrefHeight(100);
+        menuButton.setPrefWidth(60);
+        menuButton.setOpacity(0);
+        menuButton.setOnMouseClicked(event -> {
+            // Switch to the menu
+            switchToMenu(primaryStage);
+        });
+
+        Button retryButton = new Button("Retry");
+        retryButton.setLayoutX(960); // Set the X coordinate
+        retryButton.setLayoutY(560); // Set the Y coordinate
+        retryButton.setPrefHeight(100);
+        retryButton.setPrefWidth(60);
+        retryButton.setOpacity(0);
+        retryButton.setOnMouseClicked(event -> {
+            resetAndStartGame( primaryStage);
+
+            // Set the scene back to the game scene
+
+        });
+
+
+        Image retryBgImage = new Image("mondstat.jpeg");
+        ImageView retryBgImageView = new ImageView(retryBgImage);
+        retryBgImageView.setOpacity(0.7);
+        retryBgImageView.setFitWidth(1600);
+        retryBgImageView.setFitHeight(800);
+        retryBgImageView.setPreserveRatio(false);
 
         // Create a retry button
-        Button retryButton = new Button("Retry");
-        retryButton.setLayoutX(375); // Adjust the position as needed
-        retryButton.setLayoutY(375); // Adjust the position as needed
-
-        StackPane stackPane = new StackPane(retryBgImage, retryButton);
-        // Set the action for the retry button
-        retryButton.setOnAction(event -> {
+        Image retryImage = new Image("RETRY.png"); // Replace "RETRY.png" with your image file
+        ImageView retryImageView = new ImageView(retryImage);
+        retryImageView.setOnMouseClicked(event -> {
             // Reset the game
             reset();
 
             // Set the scene back to the game scene
             primaryStage.setScene(scene);
-
         });
 
+        // Disable the retry button
+        retryImageView.setDisable(true);
+
         // Add the retry button to the retry pane
-        retryPane.getChildren().add(retryButton);
+        retryPane.getChildren().add(retryImageView);
+
+        // Create a StackPane and add the ImageView and VBox to it
+        StackPane stackPane = new StackPane();
+        Pane scorePane = new Pane();
+
+        stackPane.getChildren().add(retryImageView);
+        stackPane.getChildren().add(scorePane);
+
+        // Create labels to display the current score and high score
+        Label scoreLabel = new Label(String.valueOf(Score));
+        scoreLabel.setLayoutX(580); // Set the X coordinate
+        scoreLabel.setLayoutY(300); // Set the Y coordinate
+
+        scoreLabel.setStyle("-fx-font-size: 100; -fx-text-fill: #011627;"); // adjust the style as needed
+
+        Label highScoreLabel = new Label(String.valueOf(highScore));
+        highScoreLabel.setLayoutX(900); // Set the X coordinate
+        highScoreLabel.setLayoutY(300); // Set the Y coordinate
+        highScoreLabel.setStyle("-fx-font-size: 100; -fx-text-fill: #011627;"); // adjust the style as needed
+        // Add the score labels to the stack pane
+        scorePane.getChildren().add(scoreLabel);
+        scorePane.getChildren().add(highScoreLabel);
+        scorePane.getChildren().add(menuButton);
+        scorePane.getChildren().add(retryButton);
+
+
+
 
         // Create a new scene for the retry screen
-        Scene retryScene = new Scene(retryPane, 800, 800);
+        Scene retryScene = new Scene(stackPane, 1600, 800);
 
         // Set the scene of the primary stage to the retry scene
         primaryStage.setScene(retryScene);
@@ -627,8 +739,6 @@ public class game extends Application {
 
             fallTimeline.setOnFinished(fallEvent -> {
                 // Remove the character from the root pane once it has fallen
-                root.getChildren().remove(character);
-
                 // Show the retry screen
                 if (root.getScene().getWindow() instanceof javafx.stage.Stage) {
                     showRetryScreen((javafx.stage.Stage) root.getScene().getWindow());
@@ -654,7 +764,7 @@ public class game extends Application {
 
         // Generate a new platform with random width and position
         double randomOffset = Math.random() * 100;
-        gap = 50 + Math.random() * 300;
+        gap = 30 + Math.random() * 200;
         System.out.println("gap = " + gap);
         double wid = 100 + Math.random() * 200;
         platform2 = new Platform(wid, 500, 300+ + gap, 500);
@@ -676,21 +786,120 @@ public class game extends Application {
 
 
     }
+    private void resetGame() {
+
+        // Reset all the variables to their initial values
+        movementScore = 0;
+        Score = 0;
+        completedStickLength = 0;
+        isMoving = false;
+        isCharacterAtEndPoint = false;
+        isSpaceBarLocked = false;
+        canCreateStick = true;
+        isSigilCollected = false;
+        isSpaceBarPressed = false;
+        isCharacterMoved = false;
+        isComponentsMoved = false;
+        isStickCreated = false;
+        isCharacterMoving = false;
+        characterCollided = false;
+
+        // Remove all nodes from the root pane
+        root.getChildren().clear();
+        // Recreate the game scene
+        scene = createGameScene();
+
+        Image gameBg = new Image("mondstat.jpeg");
+        ImageView gameBgImage = new ImageView(gameBg);
+        gameBgImage.setFitWidth(1600);
+        gameBgImage.setFitHeight(800);
+        gameBgImage.setPreserveRatio(false);
+        root.getChildren().add(gameBgImage);
+        // Reset the character's position
+        character.setTranslateX(defaultStickManX-50);
+        character.setTranslateY(435);
+
+        // Add the character back to the root pane
+        root.getChildren().add(character);
+        // Reset the score labels
+        movementScoreLabel.setText(String.valueOf(movementScore));
+        SigilLabel.setText(String.valueOf(Score));
+
+        // Add the score labels back to the root pane
+        root.getChildren().add(movementScoreLabel);
+        root.getChildren().add(SigilLabel);
+
+        // Recreate the platforms and add them to the root pane
+        platform1 = new Platform(300, 500, 200, 500);
+        platform2 = new Platform(100, 500, 700, 500);
+        root.getChildren().add(platform1.getRectangle());
+        root.getChildren().add(platform2.getRectangle());
+
+        // Recreate the Sigil and add it to the root pane
+        Sigil = new ImageView(new Image("anemo.png"));
+        Sigil.setFitHeight(20);
+        Sigil.setFitWidth(20);
+        double gapStart = platform1.getX() + platform1.getWidth();
+        double gapEnd = platform2.getX();
+        double gapMiddle = (gapStart + gapEnd) / 2;
+        Sigil.setX(gapMiddle);
+        Sigil.setY(platform1.getY() + 10);
+        root.getChildren().add(Sigil);
+
+
+        HBox scoreBox = new HBox(ScoreSigil, SigilLabel);
+        scoreBox.setAlignment(Pos.TOP_RIGHT);
+
+        // Add the scoreBox to the root pane
+        root.getChildren().add(scoreBox);
+        AnchorPane.setTopAnchor(scoreBox, 10.0); // 10 units down from the top edge
+        AnchorPane.setLeftAnchor(scoreBox, 0.0); // 0 units from the left edge
+        AnchorPane.setRightAnchor(scoreBox, 0.0); // 0 units from the right edge
+
+    }
 
     private void switchToMenu(javafx.stage.Stage primaryStage) {
-        VBox menuPane = new VBox(10); // 10 is the spacing between elements
-        menuPane.setAlignment(Pos.CENTER); // Align elements to the center
+        // Create a new pane for the menu screen
+        Pane menuPane = new Pane();
 
         Image bgImage = new Image("mondstat.jpeg");
         ImageView bgImageView = new ImageView(bgImage);
-        bgImageView.setOpacity(0.7);
+//        bgImageView.setOpacity(0.7);
         bgImageView.setFitWidth(1600);
         bgImageView.setFitHeight(800);
         bgImageView.setPreserveRatio(false);
 
+        Image image1 = new Image("quit6.png"); // Replace with your image file
+        ImageView imageView1 = new ImageView(image1);
+        imageView1.setLayoutX(0); // Top left
+        imageView1.setLayoutY(0);
+
+        imageView1.setOnMouseClicked(event -> {
+            // Exit the application
+            javafx.application.Platform.exit();
+        });
+
+        Image image2 = new Image("STICK HERO.png"); // Replace with your image file
+        ImageView imageView2 = new ImageView(image2);
+        imageView2.setLayoutX(600); // Top center
+        imageView2.setLayoutY(0);
+
+        Image image3 = new Image("aether.png"); // Replace with your image file
+        ImageView imageView3 = new ImageView(image3);
+        imageView3.setLayoutX(400); // Just left to the middle image
+        imageView3.setLayoutY(0);
+
+        imageView3.setFitHeight(100);
+        imageView3.setFitWidth(100);
+        imageView2.setFitHeight(100);
+
+        imageView1.setFitHeight(100);
+        imageView1.setFitWidth(100);
         // Load the image and create an ImageView object
-        Image playImage = new Image("START.png"); // Replace "play.png" with your image file
+        Image playImage = new Image("Group 11.png"); // Replace "play.png" with your image file
         ImageView playImageView = new ImageView(playImage);
+        playImageView.setLayoutX(600); // Set the X coordinate
+        playImageView.setLayoutY(400); // Set the Y coordinate
 
         // Set an onMouseClicked event to the ImageView
         playImageView.setOnMouseClicked(event -> {
@@ -699,18 +908,14 @@ public class game extends Application {
 
         });
 
-        // Add the ImageView to the menuPane
-        menuPane.getChildren().add(playImageView);
+        // Add the ImageView and VBox to the menuPane
+        menuPane.getChildren().addAll(bgImageView, imageView1, imageView2, imageView3, playImageView);
 
-        // Create a StackPane and add the ImageView and VBox to it
-        StackPane stackPane = new StackPane(bgImageView, menuPane);
-
-        Scene menuScene = new Scene(stackPane, 1600, 800);
+        Scene menuScene = new Scene(menuPane, 1600, 800);
         menuScene.getStylesheets().add(getClass().getResource("/menustyle.css").toExternalForm());
 
         primaryStage.setScene(menuScene);
         javafx.application.Platform.runLater(() -> primaryStage.setMaximized(true));
-
     }
     private Scene createGameScene() {
         // Create the game pane

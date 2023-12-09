@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.lang.*?>
-<?import java.util.*?>
-<?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.*?>
 
-<AnchorPane xmlns="http://javafx.com/javafx"
-            xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.example.demo.game"
-            prefHeight="400.0" prefWidth="600.0">
-
+<AnchorPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.demo.game">
+   <children>
+      <ImageView fitHeight="400.0" fitWidth="600.0">
+         <image>
+            <Image url="@../../../../resources/RETRY.png" />
+         </image>
+      </ImageView>
+      <Line endX="100.0" fill="RED" layoutX="101.0" layoutY="164.0" smooth="false" startX="-100.0" strokeWidth="10.0" AnchorPane.bottomAnchor="231.0" AnchorPane.leftAnchor="-4.0" AnchorPane.rightAnchor="394.0" AnchorPane.topAnchor="158.6" />
+      <Button layoutX="227.0" layoutY="282.0" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mnemonicParsing="false" prefHeight="44.0" prefWidth="33.0" text="Button" AnchorPane.bottomAnchor="74.0" AnchorPane.leftAnchor="227.00000000000003" AnchorPane.rightAnchor="339.4" AnchorPane.topAnchor="282.0" />
+   </children>
 </AnchorPane>
